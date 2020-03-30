@@ -9,8 +9,15 @@ package lipsi.util
 import scala.io.Source
 //import Chisel._
 
-object Assembler {
+// use *getProgram(asmfile)* to transfer asm code to machine code
+// use *getProgramFix()* to get default code
 
+// pass 1: collect symbols (tags)
+//         (it seems that the prog generated in pass 1 is ignored
+//          and we only need the Map[String, Int])
+// pass 2: using 'symbols' to translate branch instructions
+object Assembler {
+  // test program in machine code
   val prog = Array[Int](
     0xc7, 0x12, // ldi 0x12
     0xc0, 0x34, // addi 0x34
@@ -29,16 +36,17 @@ object Assembler {
   def getProgram(prog: String) = assemble(prog)
 
   def assemble(prog: String): Array[Int] = {
-    assemble(prog, false)
-    assemble(prog, true)
+    assemble(prog, false) // first pass
+    assemble(prog, true) // second pass
   }
 
   def assemble(prog: String, pass2: Boolean): Array[Int] = {
 
-    val source = Source.fromFile(prog)
-    var program = List[Int]()
-    var pc = 0
+    val source = Source.fromFile(prog) // read from given file
+    var program = List[Int]() // machine code
+    var pc = 0 // mark the destination addr for branch instructions
 
+    // only support hex and decimal
     def toInt(s: String): Int = {
       if (s.startsWith("0x")) {
         Integer.parseInt(s.substring(2), 16)
@@ -47,11 +55,13 @@ object Assembler {
       }
     }
 
+    // get reg number from register direct addressing
     def regNumber(s: String): Int = {
       assert(s.startsWith("r"))
       s.substring(1).toInt
     }
 
+    // register indirect addressing
     def regIndirect(s: String): Int = {
       assert(s.startsWith("(r"))
       assert(s.endsWith(")"))
