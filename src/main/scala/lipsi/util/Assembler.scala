@@ -77,6 +77,7 @@ object Assembler {
       val instr = tokens(0) match {
         case "#" => // comment
         case Pattern(l) => if (!pass2) symbols += (l.substring(0, l.length - 1) -> pc)
+        // alu register
         case "add" => 0x00 + regNumber(tokens(1))
         case "sub" => 0x10 + regNumber(tokens(1))
         case "adc" => 0x20 + regNumber(tokens(1))
@@ -85,6 +86,7 @@ object Assembler {
         case "or" => 0x50 + regNumber(tokens(1))
         case "xor" => 0x60 + regNumber(tokens(1))
         case "ld" => 0x70 + regNumber(tokens(1))
+        // alu immediate
         case "addi" => (0xc0, toInt(tokens(1)))
         case "subi" => (0xc1, toInt(tokens(1)))
         case "adci" => (0xc2, toInt(tokens(1)))
@@ -93,12 +95,20 @@ object Assembler {
         case "ori" => (0xc5, toInt(tokens(1)))
         case "xori" => (0xc6, toInt(tokens(1)))
         case "ldi" => (0xc7, toInt(tokens(1)))
+        // load/store
         case "st" => 0x80 + regNumber(tokens(1))
         case "ldind" => 0xa0 + regIndirect(tokens(1))
         case "stind" => 0xb0 + regIndirect(tokens(1))
+        // branch
         case "br" => (0xd0, if (pass2) symbols(tokens(1)) else 0)
         case "brz" => (0xd2, if (pass2) symbols(tokens(1)) else 0)
         case "brnz" => (0xd3, if (pass2) symbols(tokens(1)) else 0)
+        case "brl" => 0x90 + (if (pass2) symbols(tokens(1)) else 0)
+        // shift
+        case "sll" => 0xe1 // left logical
+        case "sra" => 0xe2 // right arith
+        case "srl" => 0xe3 // right logical
+        // other
         case "io" => 0xf0 + toInt(tokens(1))
         case "exit" => (0xff)
         case "" => // println("Empty line")

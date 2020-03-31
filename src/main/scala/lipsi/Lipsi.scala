@@ -59,6 +59,9 @@ class Lipsi(prog: String) extends Module {
   // IO register
   val outReg = RegInit(0.U(8.W))
   val enaIoReg = RegInit(false.B)
+  // shift register
+  val shFuncReg = RegInit(0.U(2.W))
+  val enaSh = RegInit(false.B)
 
   val mem = Module(new Memory(prog))
 
@@ -118,6 +121,7 @@ class Lipsi(prog: String) extends Module {
   enaAccuReg := false.B
   enaPcReg := false.B
   enaIoReg := false.B
+  enaSh := false.B
 
   // debug(enaAccuReg) Chisel 2
   switch(stateReg) {
@@ -159,6 +163,13 @@ class Lipsi(prog: String) extends Module {
         when(doBranch) {
           enaPcReg := true.B
         }
+      }
+      // Shift
+      when(rdData(7, 4) === 0xe.U) {
+        updPC := false.B
+        shFuncReg := rdData(1, 0)
+        enaAccuReg := true.B
+        enaSh := true.B
       }
       // IO
       when(rdData === 0xf0.U) {
@@ -208,8 +219,19 @@ class Lipsi(prog: String) extends Module {
     is(xor) { res := accuReg ^ op }
     is(ld) { res := op }
   }
+  // shift function
+  val shiftRes = Wire(UInt(8.W))
+  shiftRes := 0.U // initialize!!!
+  val nop :: sll :: sra :: srl :: Nil = Enum(4)
+  switch(shFuncReg) {
+    is(nop) { shiftRes := accuReg }
+    is(sll) { shiftRes := Cat(accuReg(6, 0), 0.U(1.W)) }
+    is(sra) { shiftRes := Cat(accuReg(7), accuReg(7, 1)) }
+    is(srl) { shiftRes := Cat(0.U(1.W), accuReg(7, 1)) }
+  }
+
   when(enaAccuReg) {
-    accuReg := res
+    accuReg := Mux(enaSh, shiftRes, res)
   }
   when(enaIoReg) {
     accuReg := io.din

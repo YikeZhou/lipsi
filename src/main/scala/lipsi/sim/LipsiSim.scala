@@ -44,6 +44,15 @@ class LipsiSim(asm: String) {
     }
   }
 
+  def shift(func: Int): Int = {
+    func match {
+      case 0x0 => accu
+      case 0x1 => (accu << 1) & 0xff
+      case 0x2 => ((accu >> 1) | (accu & 0x80)) & 0xff
+      case 0x3 => (accu >>> 1) & 0xff
+    }
+  }
+
   def step(): Unit = {
 
     if (delayOne) {
@@ -57,7 +66,7 @@ class LipsiSim(asm: String) {
       delayTwoUpdate = false
     } else {
       val instr = mem(pc)
-      if ((instr & 0x80) == 0) {
+      if ((instr & 0x80) == 0) { // ALU register
         accuNext = alu((instr >> 4) & 0xf, mem((instr & 0x0f) + 256))
         delayUpdate = true
         noPcIncr = true
@@ -87,8 +96,12 @@ class LipsiSim(asm: String) {
             }
             delayOne = true
           }
-          case 0x6 =>
-          case 0x7 =>
+          case 0x6 => {
+            accuNext = shift(instr & 0x03)
+            delayUpdate = true
+            noPcIncr = true
+          }
+          case 0x7 => // io
         }
       }
 
